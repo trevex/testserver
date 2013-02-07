@@ -1,0 +1,2 @@
+Before executing the build it is necessary to setup the environment for the intel compiler as follows:
+source [install_dir]/bin/compilervars.sh intel64
