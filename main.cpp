@@ -14,12 +14,10 @@ TQueue<std::string, 5> queue;
 
 int test(void)
 {
-    auto my_state = queue.createState();
-
     std::string* my_item = new std::string("TEST!");
 
     int i = 1000000;
-    while(i--) queue.enqueue(my_state, my_item);
+    while(i--) queue.enqueue(my_item);
 
     return 0;
 }
