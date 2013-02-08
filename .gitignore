@@ -1,3 +1,4 @@
-actor
+ivy
+!src/ivy
 *.o
 *.dblite
