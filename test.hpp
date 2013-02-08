@@ -6,9 +6,9 @@ template<unsigned int block_size_t>
 class CBlock
 {
 public:
-	CBlock(void) : head(0), tail(0), deleted(false)
+	CBlock(CBlock<block_size_t>* b) : head(0), tail(0), deleted(false)
 	{
-		next.store((CBlock*)null_ptr);
+		next.store(b);
 		for (int i = 0; i < block_size_t; i++) nodes[i].store(null_ptr);
 	}
 
@@ -16,7 +16,7 @@ public:
 	int head;
 	int tail;
 	bool deleted;
-	std::atomic<CBlock*> next;
+	std::atomic<CBlock<block_size_t>*> next;
 protected:
 private:
 };
@@ -38,25 +38,19 @@ template<typename node_t, unsigned int block_size_t>
 class TQueue
 {
 public:
-	TQueue(void)
+	TQueue(void) : null_block(NULL)
 	{
-		block_t* b = new block_t();
+		block_t* b = new block_t(null_block);
 		queue_head.store(b);
 		queue_tail.store(b);
 	}
-	inline CBlock<block_size_t>* loadHead(void) const
+	
+	SQueueState<block_size_t>* createState(void)
 	{
-		return std::atomic_load(&queue_head); 
-	}
-	inline CBlock<block_size_t>* loadTail(void) const
-	{
-		return std::atomic_load(&queue_tail);
-	}
-	inline SQueueState<block_size_t>* createState(void)
-	{
-		SQueueState<block_size_t>* state = new SQueueState<block_size_t>(loadHead(), loadTail());
+		SQueueState<block_size_t>* state = new SQueueState<block_size_t>(queue_head.load(), queue_tail.load());
 		return state;
 	}
+
 	void enqueue(SQueueState<block_size_t>* state, node_t* item)
 	{
 		int head = state->node_head;
@@ -67,38 +61,38 @@ public:
 			{
 				block_t* old_block = block;
 				block->head = head;
-				block = std::atomic_load(&block->next);
-				if (block == NULL) 
+				block = block->next.load();
+				if (block == null_block) 
 				{
-					block = new block_t();
-					block_t* head_block = std::atomic_load(&queue_head);
-					while (head_block != old_block  &&  std::atomic_load(&old_block->next) == (block_t*)null_ptr) 
+					block = new block_t(null_block);
+					block_t* head_block = queue_head.load();
+					while (head_block != old_block  &&  old_block->next.load() == null_block) 
 					{
-						head_block = std::atomic_load(&queue_head);
-						if(std::atomic_load(&head_block->next) != old_block) break;
-						if(std::atomic_compare_exchange_weak(&queue_head, &head_block, old_block)) break;
+						head_block = queue_head.load();
+						if(head_block->next.load() != old_block) break;
+						if(queue_head.compare_exchange_weak(head_block, old_block)) break;
 					}
-					if(std::atomic_compare_exchange_strong(&old_block->next, (block_t**)&null_ptr, block))
+					if(old_block->next.compare_exchange_strong(null_block, block))
 					{
-						std::atomic_exchange(&queue_head, block);
+						queue_head.exchange(block);
 					}
 					else 
 					{
 						delete block;
 						block = NULL;
-						block = std::atomic_load(&old_block->next);
+						block = old_block->next.load();
 					}
 				}
-				else if(block->head == block_size_t && std::atomic_load(&block->next) != NULL)
+				else if(block->head == block_size_t && block->next.load() != null_block)
 				{
-					block = std::atomic_load(&queue_head);
+					block = queue_head.load();
 				}
 				state->block_head = block;
 				head = block->head;
 			}
-			else if(std::atomic_load(&block->nodes[head]) == null_ptr) 
+			else if(block->nodes[head].load() == null_ptr) 
 			{
-				if(std::atomic_compare_exchange_strong(&block->nodes[head], &null_ptr, (void*)item)) 
+				if(block->nodes[head].compare_exchange_strong(null_ptr, (void*)item)) 
 				{
 					state->node_head = head+1;
 					return;
@@ -110,6 +104,8 @@ public:
 protected:
 private:
 	typedef CBlock<block_size_t> block_t;
+
+	block_t* null_block;
 
 	std::atomic<block_t*> queue_head;
 	std::atomic<block_t*> queue_tail;
