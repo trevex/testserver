@@ -41,7 +41,7 @@ namespace ivy
 
  	void QueueRoutine(routine_func &f)
  	{
- 		while (!queue.push(&f));
+ 		while (!queue.push(&f)) ;
  	}
 
  	int RoutineThread(void)
