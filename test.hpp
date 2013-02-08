@@ -54,7 +54,7 @@ public:
 	void enqueue(SQueueState<block_size_t>* state, node_t* item)
 	{
 		int head = state->node_head;
-		auto block = state->block_head;
+		block_t* block = state->block_head;
 		for(;;) 
 		{
 			if (head == block_size_t) 
@@ -62,16 +62,15 @@ public:
 				block_t* old_block = block;
 				block->head = head;
 				block = block->next.load();
-				if (block == null_block) 
+				if (block == NULL) 
 				{
 					block = new block_t(null_block);
-					block_t* head_block = queue_head.load();
-					while (head_block != old_block  &&  old_block->next.load() == null_block) 
-					{
-						head_block = queue_head.load();
-						if(head_block->next.load() != old_block) break;
-						if(queue_head.compare_exchange_weak(head_block, old_block)) break;
-					}
+					//while (queue_head.load() != old_block  &&  old_block->next.load() == NULL) 
+					//{
+					//	block_t* head_block = queue_head.load();
+					//	if(head_block->next.load() != old_block) break;
+					//	if(queue_head.compare_exchange_strong(head_block, old_block)) break;
+					//}
 					if(old_block->next.compare_exchange_strong(null_block, block))
 					{
 						queue_head.exchange(block);
