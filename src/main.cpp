@@ -3,14 +3,17 @@
 */
 
 #include "ivy/routine.hpp"
+#include "ivy/ws.hpp"
 
 #include <iostream>
 #include <thread>
 
+#include <atomic>
 
+std::atomic<int> t(12);
 int test(void)
 {
-    return -18;
+    return t.load();
 }
 
 int main(void)
@@ -24,14 +27,22 @@ int main(void)
         cout << "not ";
     cout << "lockfree" << endl;
 
+    //if (ivy::ws::init(ivy::ws::ws_default))
+    //{
+    //    cout << "WS initialized!" << endl;
+    //}
+
+
     std::thread t0(ivy::RT);
     std::thread t1(ivy::RT);
 
     int i = -12;
     int j = -14;
     ivy::CR([&]()->int { return i; });
+    
+    for (int i = 0; i < 1000000; i++)
     ivy::CR([&]()->int { 
-        int k = j+1;
+        int k = j+20;
         ivy::CR([=]()->int {
             return k+3;
         });
@@ -50,7 +61,7 @@ int main(void)
 
     cout << "Tests done!" << endl; 
 
-    cout << "There were still " << ivy::mt::flush() << " routines queued." << endl;
+    cout << "There were still " << ivy::mt::flush() << " routines queued." << ivy::mt::getMapSize() << endl;
     
     return EXIT_SUCCESS;
 }   

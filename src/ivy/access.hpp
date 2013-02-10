@@ -9,34 +9,30 @@
 
 namespace ivy
 {
-	template <typename item_t, typename mutex_t>
-	class ReaderProxy 
-	{
-	public:
-  		ReaderProxy(item_t& i, mutex_t& m): lock(m), item(i) {}
-  		item_t* operator->() 
-  		{ 
-  			return &item; 
-  		}
-	private:
-  		boost::shared_lock<mutex_t> lock;
-  		item_t& item;
-	};
-
-	template <typename item_t, typename mutex_t>
-	class WriterProxy 
-	{
-	public:
-		WriterProxy(item_t& i, mutex_t& m): lock_upgrade(m), lock(lock_upgrade), item(i) {}
-  		item_t* operator->() 
-  		{ 
-  			return &item; 
-  		}
-	private:
-  		boost::upgrade_lock<mutex_t> lock_upgrade;
-  		boost::upgrade_to_unique_lock<mutex_t> lock;
-  		item_t& item;
-	};
+  template <typename Item, typename Mutex>
+  class ReaderProxy {
+  public:
+	ReaderProxy(Item& i, Mutex& m): lock(m), item(i) {}
+  
+	Item* operator->() { return &item; }
+  
+  private:
+	boost::shared_lock<Mutex> lock;
+	Item& item;
+  };
+  
+  template <typename Item, typename Mutex>
+  class WriterProxy {
+  public:
+	WriterProxy(Item& i, Mutex& m): uplock(m), lock(uplock), item(i) {}
+  
+	Item* operator->() { return &item; }
+  
+  private:
+	boost::upgrade_lock<Mutex> uplock;
+	boost::upgrade_to_unique_lock<Mutex> lock;
+	Item& item;
+  };
 }
 
 #endif

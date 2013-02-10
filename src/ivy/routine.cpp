@@ -1,13 +1,20 @@
 /*
  (c) Niklas K. Voss
 */
-#include "routine.hpp"
-#include "global.hpp"
 
 #include <iostream>
 #include <atomic>
 #include <thread>
+#include <memory>
+#include <map>
+
 #include <boost/lockfree/queue.hpp>
+#include <boost/coroutine/all.hpp>
+
+
+#include "routine.hpp"
+#include "global.hpp"
+#include "access.hpp"
 
 #ifndef IVY_QUEUE_BLOCK_SIZE
 #define IVY_QUEUE_BLOCK_SIZE 128
@@ -15,11 +22,13 @@
 
 namespace ivy
 {
+	typedef boost::coroutines::coroutine<int(routine_func)> routine;
 	typedef boost::lockfree::queue<routine_func*> routine_queue;
-
+	
 	std::atomic<bool> bRun(true);
+	
 	routine_queue queue(IVY_QUEUE_BLOCK_SIZE);
-
+	
 	namespace mt
  	{
  		bool isLockFreeQueue(void)
@@ -39,9 +48,17 @@ namespace ivy
  		}
  	}
 
+
  	void QueueRoutine(routine_func &f)
  	{
+ 		//routine* r = new routine(f);
  		while (!queue.push(&f)) ;
+ 	}
+
+ 	void CoFunction(routine::caller_type& caller)
+ 	{
+ 		routine_func f = caller.get();
+ 		caller(f());
  	}
 
  	int RoutineThread(void)
@@ -55,7 +72,8 @@ namespace ivy
  			}
  			if (f != NULL)
  			{
- 				int result = (*f)();
+ 				routine r(CoFunction, *f);
+ 				int result = r.get();
  				if (result < 0) 
  				{
  					std::lock_guard<std::mutex> lock(global::cout_mutex);

@@ -18,17 +18,34 @@ namespace ivy
         typedef ReaderProxy<MapType, boost::shared_mutex> Reader;
         typedef WriterProxy<MapType, boost::shared_mutex> Writer;
 
+
+        bool find(First key) const
+        {
+            Reader r(m_map, m_mutex);
+            auto it = r->find(key);
+            if (it == r->end()) return false;
+            return true;
+        }
+
         Second get(First key) const
         {
             Reader r(m_map, m_mutex);
-            auto it = r->find(k);
+            auto it = r->find(key);
             if (it == r->end()) return Second();
             return it->second;
         }
 
+        Second* getPtr(First key) const
+        {
+            Reader r(m_map, m_mutex);
+            auto it = r->find(key);
+            if (it == r->end()) return NULL;
+            return &it->second;
+        }
+
         void set(First key, Second value)
         {
-            Writer w(m_map, m_mutes);
+            Writer w(m_map, m_mutex);
             w->insert(std::make_pair(key, value));
         }
 
