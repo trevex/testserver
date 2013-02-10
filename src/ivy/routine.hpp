@@ -15,7 +15,7 @@ namespace ivy
  		bool isLockFreeQueue(void);
  		void stop(void);
  		int flush(void);
- 		int getMapSize(void);
+ 		int getRoutineCount(void);
  	}
 
  	// functor type

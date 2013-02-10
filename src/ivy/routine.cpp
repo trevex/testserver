@@ -9,7 +9,6 @@
 #include <map>
 
 #include <boost/lockfree/queue.hpp>
-#include <boost/coroutine/all.hpp>
 
 
 #include "routine.hpp"
@@ -22,10 +21,10 @@
 
 namespace ivy
 {
-	typedef boost::coroutines::coroutine<int(routine_func)> routine;
 	typedef boost::lockfree::queue<routine_func*> routine_queue;
 	
 	std::atomic<bool> bRun(true);
+	std::atomic<int> nRo(0);
 	
 	routine_queue queue(IVY_QUEUE_BLOCK_SIZE);
 	
@@ -46,21 +45,22 @@ namespace ivy
  			while (queue.pop(value)) count++;
  			return count;
  		}
+ 		int getRoutineCount(void)
+ 		{
+ 			return nRo;
+ 		}
  	}
 
 
  	void QueueRoutine(routine_func &f)
  	{
- 		//routine* r = new routine(f);
  		while (!queue.push(&f)) ;
  	}
 
- 	void CoFunction(routine::caller_type& caller)
- 	{
- 		routine_func f = caller.get();
- 		caller(f());
- 	}
 
+ 	static int RoutineFuncStub(void) {}
+
+	std::mutex g_routine_deletion;
  	int RoutineThread(void)
  	{
  		while(bRun.load())
@@ -70,15 +70,19 @@ namespace ivy
  			{
  				if (!bRun.load()) break;
  			}
- 			if (f != NULL)
+ 			if (f)
  			{
- 				routine r(CoFunction, *f);
- 				int result = r.get();
+ 				int result = (*f)();
  				if (result < 0) 
  				{
  					std::lock_guard<std::mutex> lock(global::cout_mutex);
  					std::cout << "Warning: " << std::this_thread::get_id() << " returned " << result << "." << std::endl;
  				}
+
+ 				nRo++;
+
+    			//std::lock_guard<std::mutex> lock(g_routine_deletion);
+    			//(*f) = &RoutineFuncStub;
  				delete f;
  			}
  		}

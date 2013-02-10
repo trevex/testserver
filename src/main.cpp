@@ -16,6 +16,11 @@ int test(void)
     return t.load();
 }
 
+void terminate (int param)
+{
+
+}
+
 int main(void)
 {
     using namespace std;
@@ -40,6 +45,7 @@ int main(void)
     int j = -14;
     ivy::CR([&]()->int { return i; });
     
+    
     for (int i = 0; i < 1000000; i++)
     ivy::CR([&]()->int { 
         int k = j+20;
@@ -48,6 +54,8 @@ int main(void)
         });
         return k;
     });
+
+
     ivy::CR(&test);
 
 
@@ -61,7 +69,7 @@ int main(void)
 
     cout << "Tests done!" << endl; 
 
-    cout << "There were still " << ivy::mt::flush() << " routines queued." << ivy::mt::getMapSize() << endl;
+    cout << "There were still " << ivy::mt::flush() << " routines queued. \nRoutines executed: " << ivy::mt::getRoutineCount() << endl;
     
     return EXIT_SUCCESS;
 }   
